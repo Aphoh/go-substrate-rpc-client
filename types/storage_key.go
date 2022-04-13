@@ -35,6 +35,64 @@ func NewStorageKey(b []byte) StorageKey {
 	return b
 }
 
+// CreatePartialStorageKey uses the given metadata and to derive the right hashing of method, prefix as well as arguments to
+// create a hashed StorageKey
+// Using variadic argument, so caller do not need to construct array of arguments
+func CreatePartialStorageKey(meta *Metadata, prefix, method string, args ...[]byte) (StorageKey, error) {
+	stringKey := []byte(prefix + " " + method)
+
+	validateAndTrimArgs := func(args [][]byte) ([][]byte, error) {
+		nonNilCount := -1
+		for i, arg := range args {
+			if len(arg) == 0 {
+				nonNilCount = i
+				break
+			}
+		}
+
+		if nonNilCount == -1 {
+			return args, nil
+		}
+
+		for i := nonNilCount; i < len(args); i++ {
+			if len(args[i]) != 0 {
+				return nil, fmt.Errorf("non-nil arguments cannot be preceded by nil arguments")
+			}
+		}
+
+		trimmedArgs := make([][]byte, nonNilCount)
+		for i := 0; i < nonNilCount; i++ {
+			trimmedArgs[i] = args[i]
+		}
+
+		return trimmedArgs, nil
+	}
+
+	validatedArgs, err := validateAndTrimArgs(args)
+	if err != nil {
+		return nil, err
+	}
+
+	entryMeta, err := meta.FindStorageEntryMetadata(prefix, method)
+	if err != nil {
+		return nil, err
+	}
+
+	// From metadata >= v14, there is only one representation of Map,
+	// which is more alike the old 'NMap': a Map with n keys (n >= 1).
+	// The old variants are now unified as thus IsMap() is true for all.
+	if entryMeta.IsMap() {
+		return createKeyMap(method, prefix, validatedArgs, entryMeta)
+	}
+
+	if entryMeta.IsPlain() && len(validatedArgs) != 0 {
+		return nil, fmt.Errorf("%s:%s is a plain key, therefore requires no argument. "+
+			"received: %d", prefix, method, len(validatedArgs))
+	}
+
+	return createKey(meta, method, prefix, stringKey, nil, entryMeta)
+}
+
 // CreateStorageKey uses the given metadata and to derive the right hashing of method, prefix as well as arguments to
 // create a hashed StorageKey
 // Using variadic argument, so caller do not need to construct array of arguments
