@@ -38,3 +38,11 @@ func TestState_QueryStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, mockSrv.storageChangeSets, data)
 }
+
+func TestState_QueryStorageAt(t *testing.T) {
+	key := types.NewStorageKey(types.MustHexDecodeString(mockSrv.storageKeyHex))
+	hash := types.NewHash(types.MustHexDecodeString("0xdd1816b6f6889f46e23b0d6750bc441af9dad0fda8bae90677c1708d01035fbe"))
+	data, err := state.QueryStorageAt([]types.StorageKey{key}, hash)
+	assert.NoError(t, err)
+	assert.Equal(t, mockSrv.storageChangeSets, data)
+}

@@ -47,3 +47,26 @@ func (s *State) queryStorage(keys []types.StorageKey, startBlock types.Hash, blo
 
 	return res, nil
 }
+
+func (s *State) QueryStorageAt(keys []types.StorageKey, block types.Hash) ([]types.StorageChangeSet, error) {
+	return s.queryStorageAt(keys, &block)
+}
+
+func (s *State) QueryStorageAtLatest(keys []types.StorageKey) ([]types.StorageChangeSet, error) {
+	return s.queryStorageAt(keys, nil)
+}
+
+func (s *State) queryStorageAt(keys []types.StorageKey, block *types.Hash) ([]types.StorageChangeSet, error) {
+	hexKeys := make([]string, len(keys))
+	for i, key := range keys {
+		hexKeys[i] = key.Hex()
+	}
+
+	var res []types.StorageChangeSet
+	err := client.CallWithBlockHash(s.client, &res, "state_queryStorageAt", block, hexKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
